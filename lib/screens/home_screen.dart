@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/product_model.dart';
 import '../theme/app_theme.dart';
 import 'charge_screen.dart';
@@ -23,13 +24,20 @@ class _HomeScreenState extends State<HomeScreen> {
           (_search.isEmpty || p.name.contains(_search)))
       .toList();
 
+  Future<void> _openTelegram() async {
+    final uri = Uri.parse('https://t.me/ahrgq');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.darkBg,
       appBar: AppBar(
         title: Text(
-          'Card Vodafone',
+          '𝐂𝐚𝐫𝐝 𝐕𝐨𝐝𝐚𝐟𝐨𝐧𝐞',
           style: GoogleFonts.cairo(
             color: AppTheme.white,
             fontWeight: FontWeight.w800,
@@ -55,13 +63,22 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openTelegram,
+        backgroundColor: const Color(0xFF229ED9),
+        icon: const Icon(Icons.send_rounded, color: Colors.white),
+        label: Text(
+          'قناة التلجرام',
+          style: GoogleFonts.cairo(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
       body: Column(
         children: [
-          // Category tabs
           _buildTabs(),
-          // Search
           _buildSearch(),
-          // List
           Expanded(child: _buildList()),
         ],
       ),
@@ -149,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return AnimationLimiter(
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         itemCount: items.length,
         itemBuilder: (ctx, i) {
           final p = items[i];
