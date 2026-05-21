@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/product_model.dart';
 import '../theme/app_theme.dart';
 import 'charge_screen.dart';
@@ -23,13 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
           p.category == _selected &&
           (_search.isEmpty || p.name.contains(_search)))
       .toList();
-
-  Future<void> _openTelegram() async {
-    final uri = Uri.parse('https://t.me/ahrgq');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,18 +55,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openTelegram,
-        backgroundColor: const Color(0xFF229ED9),
-        icon: const Icon(Icons.send_rounded, color: Colors.white),
-        label: Text(
-          'قناة التلجرام',
-          style: GoogleFonts.cairo(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
       body: Column(
         children: [
           _buildTabs(),
@@ -95,33 +75,38 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: AppTheme.cardBorder),
       ),
       child: Row(
-        children: ProductCategory.values.map((cat) {
-          final active = _selected == cat;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selected = cat),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: active ? AppTheme.red : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  cat == ProductCategory.fakka ? '💸 فكة' : '⚡ مارد',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.cairo(
-                    color: active ? AppTheme.white : AppTheme.grey,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+        children: [
+          _tab('💸 فكة', ProductCategory.fakka),
+          _tab('📱 سوشيال', ProductCategory.social),
+        ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2);
+  }
+
+  Widget _tab(String label, ProductCategory cat) {
+    final active = _selected == cat;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selected = cat),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? AppTheme.red : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.cairo(
+              color: active ? AppTheme.white : AppTheme.grey,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildSearch() {
@@ -166,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     return AnimationLimiter(
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         itemCount: items.length,
         itemBuilder: (ctx, i) {
           final p = items[i];
@@ -175,9 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(milliseconds: 350),
             child: SlideAnimation(
               verticalOffset: 30,
-              child: FadeInAnimation(
-                child: _ProductCard(product: p),
-              ),
+              child: FadeInAnimation(child: _ProductCard(product: p)),
             ),
           );
         },
@@ -216,25 +199,64 @@ class _ProductCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  product.category == ProductCategory.fakka ? '💸' : '⚡',
+                  product.category == ProductCategory.social ? '📱' : '💸',
                   style: const TextStyle(fontSize: 22),
                 ),
               ),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                product.name,
-                style: GoogleFonts.cairo(
-                  color: AppTheme.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: GoogleFonts.cairo(
+                      color: AppTheme.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      _chip('💰 ${product.netCharge} ج'),
+                      const SizedBox(width: 6),
+                      _chip('⏱ ${product.duration}'),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    product.units,
+                    style: GoogleFonts.cairo(
+                      color: AppTheme.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
             const Icon(Icons.arrow_forward_ios_rounded,
                 color: AppTheme.grey, size: 16),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.red.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.cairo(
+          color: AppTheme.red,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
