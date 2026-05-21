@@ -42,7 +42,39 @@ jobs:
         run: flutter pub get
 
       - name: Create android folder
-        run: flutter create --platforms android .
+        run: flutter create --platforms android --org com.card --project-name card_vodafone .
+
+      - name: Set app label
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="𝐂𝐚𝐫𝐝 𝐕𝐨𝐝𝐚𝐟𝐨𝐧𝐞"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Set package name
+        run: |
+          sed -i 's/com\.card\.card_vodafone/com.card.developerAlaa/g' \
+            android/app/build.gradle \
+            android/app/src/main/AndroidManifest.xml \
+            android/app/src/debug/AndroidManifest.xml \
+            android/app/src/profile/AndroidManifest.xml 2>/dev/null || true
+
+      - name: Install imagemagick
+        run: sudo apt-get install -y imagemagick
+
+      - name: Generate icons
+        run: |
+          SRC="assets/images/icon.png"
+          declare -A sizes=(
+            ["android/app/src/main/res/mipmap-mdpi"]=48
+            ["android/app/src/main/res/mipmap-hdpi"]=72
+            ["android/app/src/main/res/mipmap-xhdpi"]=96
+            ["android/app/src/main/res/mipmap-xxhdpi"]=144
+            ["android/app/src/main/res/mipmap-xxxhdpi"]=192
+          )
+          for dir in "${!sizes[@]}"; do
+            size="${sizes[$dir]}"
+            mkdir -p "$dir"
+            convert "$SRC" -resize "${size}x${size}" "$dir/ic_launcher.png"
+            convert "$SRC" -resize "${size}x${size}" "$dir/ic_launcher_round.png"
+          done
 
       - name: Build
         run: |
