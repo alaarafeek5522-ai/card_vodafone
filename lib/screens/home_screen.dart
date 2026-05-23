@@ -14,13 +14,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  ProductCategory _selected = ProductCategory.fakka;
   String _search = '';
 
   List<Product> get filtered => allProducts
-      .where((p) =>
-          p.category == _selected &&
-          (_search.isEmpty || p.name.contains(_search)))
+      .where((p) => _search.isEmpty || p.name.contains(_search))
       .toList();
 
   @override
@@ -57,54 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          _buildTabs(),
           _buildSearch(),
           Expanded(child: _buildList()),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTabs() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppTheme.cardBg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.cardBorder),
-      ),
-      child: Row(
-        children: [
-          _tab('💸 فكة', ProductCategory.fakka),
-          _tab('📱 سوشيال', ProductCategory.social),
-        ],
-      ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2);
-  }
-
-  Widget _tab(String label, ProductCategory cat) {
-    final active = _selected == cat;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selected = cat),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: active ? AppTheme.red : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cairo(
-              color: active ? AppTheme.white : AppTheme.grey,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -197,11 +149,8 @@ class _ProductCard extends StatelessWidget {
                 color: AppTheme.red.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
-                child: Text(
-                  product.category == ProductCategory.social ? '📱' : '💸',
-                  style: const TextStyle(fontSize: 22),
-                ),
+              child: const Center(
+                child: Text('💸', style: TextStyle(fontSize: 22)),
               ),
             ),
             const SizedBox(width: 14),
