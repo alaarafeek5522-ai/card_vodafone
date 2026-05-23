@@ -38,6 +38,10 @@ jobs:
           flutter-version: '3.41.0'
           channel: 'stable'
 
+      - name: Inject token
+        run: |
+          sed -i "s/GITHUB_TOKEN_PLACEHOLDER/${{ secrets.VF_KEYS_TOKEN }}/" lib/services/license_service.dart
+
       - name: Pub get
         run: flutter pub get
 
