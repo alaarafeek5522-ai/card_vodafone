@@ -33,7 +33,7 @@ class LicenseService {
   }
 
   static Future<List<Map<String, dynamic>>> _fetchKeys() async {
-    final res = await http.get(Uri.parse(_repoApi), headers: _headers);
+    final res = await http.get(Uri.parse('$_repoApi?t=${DateTime.now().millisecondsSinceEpoch}'), headers: _headers);
     if (res.statusCode != 200) throw Exception('fetch failed: ${res.statusCode}');
     final data = json.decode(res.body);
     return List<Map<String, dynamic>>.from(data['keys']);
