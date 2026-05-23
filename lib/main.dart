@@ -3,19 +3,33 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/charge_provider.dart';
 import 'screens/splash_screen.dart';
+import 'screens/blocked_screen.dart';
 import 'theme/app_theme.dart';
+import 'utils/security_check.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
-  runApp(const CardVodafoneApp());
+
+  final security = await SecurityCheck.verify();
+
+  runApp(CardVodafoneApp(
+    securityPassed: security.allowed,
+    reason: security.reason,
+  ));
 }
 
 class CardVodafoneApp extends StatelessWidget {
-  const CardVodafoneApp({super.key});
+  final bool securityPassed;
+  final String reason;
+  const CardVodafoneApp({
+    super.key,
+    required this.securityPassed,
+    required this.reason,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +39,9 @@ class CardVodafoneApp extends StatelessWidget {
         title: '𝐂𝐚𝐫𝐝 𝐕𝐨𝐝𝐚𝐟𝐨𝐧𝐞',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.theme,
-        home: const SplashScreen(),
+        home: securityPassed
+            ? const SplashScreen()
+            : BlockedScreen(reason: reason),
       ),
     );
   }

@@ -48,6 +48,73 @@ jobs:
       - name: Create android folder
         run: flutter create --platforms android --org com.card --project-name card_vodafone .
 
+      - name: Inject MainActivity
+        run: |
+          KOTLIN_DIR="android/app/src/main/kotlin/com/card/developerAlaa"
+          mkdir -p "$KOTLIN_DIR"
+          cat > "$KOTLIN_DIR/MainActivity.kt" << 'KOTLIN'
+package com.card.developerAlaa
+
+import android.content.pm.PackageManager
+import android.os.Build
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
+import java.security.MessageDigest
+
+class MainActivity : FlutterActivity() {
+    private val CHANNEL = "com.card.developerAlaa/security"
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getSignature" -> {
+                    try {
+                        val pm = packageManager
+                        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            pm.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            pm.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                        }
+                        val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            packageInfo.signingInfo.apkContentsSigners
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageInfo.signatures
+                        }
+                        val md = MessageDigest.getInstance("SHA-256")
+                        md.update(signatures[0].toByteArray())
+                        val digest = md.digest()
+                        val hexString = digest.joinToString("") { "%02x".format(it) }
+                        result.success(hexString)
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
+                    }
+                }
+                "getBuildTags" -> {
+                    result.success(Build.TAGS)
+                }
+                "getDeviceInfo" -> {
+                    val info = mapOf(
+                        "fingerprint" to Build.FINGERPRINT,
+                        "model" to Build.MODEL,
+                        "manufacturer" to Build.MANUFACTURER,
+                        "brand" to Build.BRAND,
+                        "device" to Build.DEVICE,
+                        "hardware" to Build.HARDWARE,
+                        "product" to Build.PRODUCT
+                    )
+                    result.success(info)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+}
+KOTLIN
+
       - name: Add INTERNET permission
         run: |
           sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"/>' \
