@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -19,13 +20,67 @@ class _ChargeScreenState extends State<ChargeScreen> {
   final _receiverCtrl = TextEditingController();
   final _pinCtrl = TextEditingController();
   bool _pinVisible = false;
+  bool _isVodafone = false;
+  bool _checkingNetwork = false;
   final _formKey = GlobalKey<FormState>();
+
+  static const _contactsChannel = MethodChannel('com.card.developerAlaa/contacts');
 
   @override
   void dispose() {
     _receiverCtrl.dispose();
     _pinCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickContact() async {
+    try {
+      final result = await _contactsChannel.invokeMethod<String>('pickContact');
+      if (result != null && result.isNotEmpty) {
+        // تنظيف الرقم
+        String clean = result.replaceAll(RegExp(r'[^\d]'), '');
+        if (clean.startsWith('20') && clean.length == 12) {
+          clean = '0${clean.substring(2)}';
+        }
+        if (clean.startsWith('+20')) {
+          clean = '0${clean.substring(3)}';
+        }
+        _receiverCtrl.text = clean;
+        if (clean.startsWith('01') && clean.length == 11) {
+          await _checkVodafone(clean);
+        }
+      }
+    } catch (e) {
+      // لو MethodChannel مش جاهز نفتح contacts بطريقة تانية
+      _showContactsManual();
+    }
+  }
+
+  void _showContactsManual() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'ادخل الرقم يدوياً',
+          style: GoogleFonts.cairo(color: Colors.white),
+        ),
+        backgroundColor: AppTheme.cardBg,
+      ),
+    );
+  }
+
+  Future<void> _checkVodafone(String number) async {
+    if (!number.startsWith('01') || number.length != 11) return;
+    setState(() => _checkingNetwork = true);
+
+    // Vodafone Egypt prefixes
+    final vodafonePrefixes = ['010', '011'];
+    final prefix = number.substring(0, 3);
+    final isVf = vodafonePrefixes.contains(prefix);
+
+    setState(() {
+      _isVodafone = isVf;
+      _checkingNetwork = false;
+    });
   }
 
   Future<void> _submit() async {
@@ -66,46 +121,150 @@ class _ChargeScreenState extends State<ChargeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product badge
               _buildProductBadge(),
               const SizedBox(height: 28),
-              // Receiver field
               _buildLabel('📱 رقم المستقبل'),
               const SizedBox(height: 8),
-              _buildTextField(
-                controller: _receiverCtrl,
-                hint: '01xxxxxxxxx',
-                keyboardType: TextInputType.phone,
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'ادخل الرقم';
-                  if (!v.startsWith('01') || v.length != 11) {
-                    return 'رقم غير صحيح';
-                  }
-                  return null;
-                },
+              // حقل الرقم مع زر جهات الاتصال
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _receiverCtrl,
+                      keyboardType: TextInputType.phone,
+                      style: GoogleFonts.cairo(color: AppTheme.white, fontSize: 16),
+                      onChanged: (v) {
+                        if (v.length == 11) _checkVodafone(v);
+                        if (v.length < 11) setState(() => _isVodafone = false);
+                      },
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'ادخل الرقم';
+                        if (!v.startsWith('01') || v.length != 11) return 'رقم غير صحيح';
+                        return null;
+                      },
+                      decoration: InputDecoration(
+                        hintText: '01xxxxxxxxx',
+                        hintStyle: GoogleFonts.cairo(color: AppTheme.grey),
+                        suffixIcon: _checkingNetwork
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 16, height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: AppTheme.grey,
+                                  ),
+                                ),
+                              )
+                            : _receiverCtrl.text.length == 11
+                                ? Icon(
+                                    _isVodafone ? Icons.check_circle : Icons.warning_rounded,
+                                    color: _isVodafone ? Colors.green : Colors.orange,
+                                    size: 20,
+                                  )
+                                : null,
+                        filled: true,
+                        fillColor: AppTheme.cardBg,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppTheme.cardBorder),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: _receiverCtrl.text.length == 11
+                                ? (_isVodafone ? Colors.green : Colors.orange)
+                                : AppTheme.cardBorder,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppTheme.red, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // زر جهات الاتصال
+                  GestureDetector(
+                    onTap: _pickContact,
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppTheme.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppTheme.red.withOpacity(0.4)),
+                      ),
+                      child: const Icon(
+                        Icons.contacts_rounded,
+                        color: AppTheme.red,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              // مؤشر فودافون
+              if (_receiverCtrl.text.length == 11) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      _isVodafone ? Icons.check_circle : Icons.warning_rounded,
+                      color: _isVodafone ? Colors.green : Colors.orange,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _isVodafone ? 'رقم فودافون ✅' : 'مش فودافون ⚠️',
+                      style: GoogleFonts.cairo(
+                        color: _isVodafone ? Colors.green : Colors.orange,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 20),
-              // PIN field
               _buildLabel('🔒 الرقم السري للمحفظة'),
               const SizedBox(height: 8),
-              _buildTextField(
+              TextFormField(
                 controller: _pinCtrl,
-                hint: '••••••',
-                obscure: !_pinVisible,
-                suffix: IconButton(
-                  icon: Icon(
-                    _pinVisible ? Icons.visibility_off : Icons.visibility,
-                    color: AppTheme.grey,
-                  ),
-                  onPressed: () => setState(() => _pinVisible = !_pinVisible),
-                ),
+                obscureText: !_pinVisible,
+                style: GoogleFonts.cairo(color: AppTheme.white, fontSize: 16),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'ادخل الرقم السري';
                   return null;
                 },
+                decoration: InputDecoration(
+                  hintText: '••••••',
+                  hintStyle: GoogleFonts.cairo(color: AppTheme.grey),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _pinVisible ? Icons.visibility_off : Icons.visibility,
+                      color: AppTheme.grey,
+                    ),
+                    onPressed: () => setState(() => _pinVisible = !_pinVisible),
+                  ),
+                  filled: true,
+                  fillColor: AppTheme.cardBg,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.cardBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.cardBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: AppTheme.red, width: 1.5),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
               ),
               const SizedBox(height: 36),
-              // Submit button
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -122,18 +281,15 @@ class _ChargeScreenState extends State<ChargeScreen> {
                   ),
                   child: loading
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
+                          width: 24, height: 24,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
+                            color: Colors.white, strokeWidth: 2.5,
                           ),
                         )
                       : Text(
                           'شحن الآن',
                           style: GoogleFonts.cairo(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 18, fontWeight: FontWeight.w700,
                           ),
                         ),
                 ),
@@ -160,9 +316,23 @@ class _ChargeScreenState extends State<ChargeScreen> {
       ),
       child: Row(
         children: [
-          Text(
-            widget.product.category == ProductCategory.fakka ? '💸' : '⚡',
-            style: const TextStyle(fontSize: 32),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.red.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                'V',
+                style: GoogleFonts.cairo(
+                  color: AppTheme.red,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Column(
@@ -180,6 +350,10 @@ class _ChargeScreenState extends State<ChargeScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              Text(
+                '${widget.product.units} — ${widget.product.duration}',
+                style: GoogleFonts.cairo(color: AppTheme.grey, fontSize: 12),
+              ),
             ],
           ),
         ],
@@ -194,47 +368,6 @@ class _ChargeScreenState extends State<ChargeScreen> {
         color: AppTheme.greyLight,
         fontSize: 14,
         fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    TextInputType? keyboardType,
-    bool obscure = false,
-    Widget? suffix,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: GoogleFonts.cairo(color: AppTheme.white, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.cairo(color: AppTheme.grey),
-        suffixIcon: suffix,
-        filled: true,
-        fillColor: AppTheme.cardBg,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppTheme.cardBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppTheme.cardBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppTheme.red, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Colors.orange),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }

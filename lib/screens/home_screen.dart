@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/product_model.dart';
 import '../theme/app_theme.dart';
 import 'charge_screen.dart';
@@ -20,6 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
       .where((p) => _search.isEmpty || p.name.contains(_search))
       .toList();
 
+  Future<void> _openTelegram() async {
+    final uri = Uri.parse('https://TV-T5.github.io/team_mufasa1/');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,19 +38,47 @@ class _HomeScreenState extends State<HomeScreen> {
           style: GoogleFonts.cairo(
             color: AppTheme.white,
             fontWeight: FontWeight.w800,
-            fontSize: 22,
+            fontSize: 20,
           ),
         ),
         actions: [
+          // زر تلجرام
+          GestureDetector(
+            onTap: _openTelegram,
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF229ED9).withOpacity(0.15),
+                border: Border.all(color: const Color(0xFF229ED9), width: 1.5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.send_rounded, color: Color(0xFF229ED9), size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'القناة',
+                    style: GoogleFonts.cairo(
+                      color: const Color(0xFF229ED9),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Vodafone Cash badge
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               border: Border.all(color: AppTheme.red, width: 1.5),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'فودافون كاش',
+              'Vodafone Cash',
               style: GoogleFonts.cairo(
                 color: AppTheme.red,
                 fontSize: 12,
@@ -142,6 +178,7 @@ class _ProductCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // لوجو فودافون بدل الدولار
             Container(
               width: 44,
               height: 44,
@@ -149,8 +186,15 @@ class _ProductCard extends StatelessWidget {
                 color: AppTheme.red.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: Text('💸', style: TextStyle(fontSize: 22)),
+              child: Center(
+                child: Text(
+                  'V',
+                  style: GoogleFonts.cairo(
+                    color: AppTheme.red,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
